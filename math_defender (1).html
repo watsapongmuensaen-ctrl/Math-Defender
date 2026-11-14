@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Math Defender ภารกิจคณิตพิชิตอุกกาบาต</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #03040c;
+            color: white;
+            font-family: 'Chakra Petch', sans-serif;
+            touch-action: none;
+        }
+
+        /* ขยายเต็มหน้าจอ 100% */
+        #game-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(ellipse at 50% 100%, #162447 0%, #0a0c1b 55%, #03040c 100%);
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        
+        /* แถบข้อมูลด้านบนดีไซน์ Sci-Fi Glassmorphism */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 15px 25px;
+            pointer-events: auto;
+            width: 100%;
+        }
+
+        .hud-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hud-card {
+            background: rgba(11, 18, 34, 0.78);
+            border: 1.5px solid rgba(69, 243, 255, 0.45);
+            border-radius: 14px;
+            padding: 8px 18px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 12px rgba(69, 243, 255, 0.12);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #8ab4f8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #45f3ff;
+            text-shadow: 0 0 10px rgba(69, 243, 255, 0.6);
+            line-height: 1.1;
+        }
+        .stat-value.quest {
+            color: #ffdd00;
+            text-shadow: 0 0 10px rgba(255, 221, 0, 0.6);
+        }
+
+        .lives-box {
+            background: rgba(25, 10, 20, 0.78);
+            border: 1.5px solid rgba(255, 69, 100, 0.5);
+            border-radius: 14px;
+            padding: 10px 18px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 12px rgba(255, 69, 100, 0.15);
+            font-size: 22px;
+            font-weight: bold;
+            color: #ff6b81;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .icon-btn {
+            background: rgba(11, 18, 34, 0.85);
+            border: 1.5px solid #45f3ff;
+            color: #45f3ff;
+            font-size: 22px;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 12px rgba(69, 243, 255, 0.25);
+        }
+        .icon-btn:hover {
+            background: #45f3ff;
+            color: #050510;
+            transform: translateY(-2px);
+            box-shadow: 0 0 18px rgba(69, 243, 255, 0.7);
+        }
+
+        /* กรอบแสดงตัวเลขที่พิมพ์ตอบและ Numpad มุมขวาล่าง */
+        .input-wrapper {
+            position: absolute;
+            bottom: 38px;
+            right: 24px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            z-index: 20;
+        }
+        
+        #current-input {
+            background: rgba(8, 14, 28, 0.9);
+            border: 2px solid #45f3ff;
+            border-radius: 12px;
+            padding: 8px 18px;
+            font-size: 32px;
+            font-weight: 700;
+            color: #45f3ff;
+            min-width: 150px;
+            min-height: 54px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(69, 243, 255, 0.35), inset 0 0 10px rgba(69, 243, 255, 0.15);
+            text-shadow: 0 0 10px rgba(69, 243, 255, 0.8);
+            transition: all 0.12s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        #current-input::before {
+            content: "คำตอบ";
+            position: absolute;
+            top: -10px;
+            left: 12px;
+            background: #0b132b;
+            padding: 0 6px;
+            font-size: 11px;
+            color: #8ab4f8;
+            border-radius: 4px;
+            border: 1px solid rgba(69, 243, 255, 0.4);
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            background: rgba(8, 14, 28, 0.85);
+            padding: 12px;
+            border-radius: 16px;
+            border: 1.5px solid rgba(69, 243, 255, 0.4);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+        }
+        
+        /* แผงปุ่มกดคำตอบแนวนอน 2 แถว (0-20) */
+        .horizontal-answers {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(8, 14, 28, 0.85);
+            padding: 12px 16px;
+            border-radius: 18px;
+            border: 1.5px solid rgba(69, 243, 255, 0.45);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65), 0 0 20px rgba(69, 243, 255, 0.15);
+            pointer-events: auto;
+            width: fit-content;
+            max-width: 96vw;
+            z-index: 20;
+        }
+
+        .ans-row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* ปุ่มขนาดเท่ากันทุกปุ่มและปรับขนาดอัตโนมัติตามจอ */
+        .horizontal-answers .ans-btn, .numpad-btn {
+            width: clamp(42px, 5.2vw, 58px);
+            height: clamp(42px, 6.2vh, 56px);
+            font-size: clamp(18px, 2vw, 24px);
+            flex-grow: 0;
+            flex-shrink: 0;
+            background: linear-gradient(180deg, #1e2d4a 0%, #0d1526 100%);
+            border: 1.5px solid #45f3ff;
+            color: #fff;
+            font-weight: 700;
+            font-family: inherit;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #094a5e, inset 0 1px 2px rgba(255,255,255,0.25);
+            transition: transform 0.08s, background 0.15s, box-shadow 0.08s;
+            text-shadow: 0 0 6px rgba(69, 243, 255, 0.5);
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .horizontal-answers .ans-btn:hover, .numpad-btn:hover {
+            background: linear-gradient(180deg, #2b446e 0%, #152238 100%);
+            border-color: #80f8ff;
+        }
+
+        .ans-btn:active, .numpad-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #094a5e;
+        }
+        .del-btn {
+            border-color: #ff4757;
+            background: linear-gradient(180deg, #4a1e28 0%, #260d12 100%);
+            box-shadow: 0 4px 0 #6b1120;
+            font-size: 16px;
+        }
+        .fire-btn {
+            background: linear-gradient(180deg, #45f3ff 0%, #00b4d8 100%);
+            color: #03040c;
+            box-shadow: 0 4px 0 #0077b6;
+            font-size: 26px;
+            text-shadow: none;
+        }
+
+        /* หน้าต่างเมนูหลัก */
+        .menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 15, 30, 0.92);
+            padding: clamp(24px, 4vh, 40px);
+            border-radius: 24px;
+            border: 2px solid #45f3ff;
+            text-align: center;
+            pointer-events: auto;
+            box-shadow: 0 0 50px rgba(69, 243, 255, 0.3), inset 0 0 30px rgba(69, 243, 255, 0.1);
+            backdrop-filter: blur(15px);
+            width: 90%;
+            max-width: 580px;
+            z-index: 30;
+        }
+        .menu h1 {
+            color: #45f3ff;
+            margin: 0 0 5px 0;
+            font-size: clamp(32px, 5vw, 48px);
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(69, 243, 255, 0.7);
+            letter-spacing: 2px;
+        }
+        .menu-subtitle {
+            color: #ffdd00;
+            margin-bottom: 22px;
+            font-size: clamp(16px, 2.5vw, 22px);
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(255, 221, 0, 0.5);
+        }
+        
+        .selection-group { margin: 18px 0; text-align: left; }
+        .selection-group label {
+            color: #a8c7fa;
+            font-size: 17px;
+            margin-bottom: 10px;
+            display: block;
+            font-weight: 600;
+        }
+        
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .mode-btn, .lvl-btn {
+            flex: 1;
+            min-width: 105px;
+            background: rgba(20, 32, 60, 0.7);
+            border: 2px solid rgba(69, 243, 255, 0.5);
+            color: #d0e8ff;
+            padding: 12px 10px;
+            font-size: 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            font-weight: 700;
+        }
+        .lvl-desc {
+            display: block;
+            font-size: 12px;
+            font-weight: 400;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+        .mode-btn.active, .lvl-btn.active, .mode-btn:hover, .lvl-btn:hover {
+            background: linear-gradient(135deg, #45f3ff 0%, #00b4d8 100%);
+            border-color: #ffffff;
+            color: #050814;
+            box-shadow: 0 0 18px rgba(69, 243, 255, 0.7);
+            transform: translateY(-2px);
+        }
+
+        .start-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%) !important;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white !important;
+            font-size: 26px !important;
+            padding: 14px !important;
+            border-radius: 14px;
+            margin-top: 22px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 700;
+            box-shadow: 0 6px 25px rgba(255, 65, 108, 0.6);
+            transition: all 0.2s;
+            letter-spacing: 1px;
+        }
+        .start-btn:hover {
+            transform: scale(1.03) translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 65, 108, 0.85);
+        }
+
+        #wave-announcement {
+            position: absolute;
+            top: 38%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(42px, 7vw, 72px);
+            font-weight: 700;
+            color: #ffdd00;
+            text-shadow: 0 0 25px rgba(255, 221, 0, 0.9), 0 4px 10px #000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s, transform 0.35s;
+            z-index: 25;
+            text-align: center;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-8px); }
+        }
+
+        /* เครดิตผู้สร้าง มุมขวาล่าง */
+        .game-credits {
+            position: absolute;
+            bottom: 10px;
+            right: 18px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.92);
+            text-shadow: 0 0 8px #45f3ff, 0 0 16px #45f3ff;
+            pointer-events: none;
+            z-index: 50;
+            font-family: 'Chakra Petch', sans-serif;
+            letter-spacing: 0.8px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div class="top-bar">
+            <div class="hud-left">
+                <button class="icon-btn" onclick="goHome()" style="display:none;" id="homeBtn" title="กลับเมนูหลัก">🏠</button>
+                <button class="icon-btn" onclick="toggleMute()" id="muteBtn" title="เปิด/ปิดเสียง">🔊</button>
+                <div class="hud-card">
+                    <div class="stat-item">
+                        <span class="stat-label">คะแนน</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div style="width: 1px; height: 32px; background: rgba(69,243,255,0.3);"></div>
+                    <div class="stat-item">
+                        <span class="stat-label">ภารกิจข้อที่</span>
+                        <span class="stat-value quest" id="wave-display">1/20</span>
+                    </div>
+                </div>
+            </div>
+            <div class="lives-box">
+                <span>พลังฐานทัพ:</span>
+                <span id="lives">❤️❤️❤️</span>
+            </div>
+        </div>
+        
+        <!-- เครดิตผู้สร้างมุมขวาล่าง แสดงตลอดเวลา -->
+        <div class="game-credits" id="credits-text">Created by ครูวรรษพงษ์ หมื่นแสน</div>
+    </div>
+    
+    <!-- แผงปุ่มกดคำตอบแนวนอน 2 แถว (0-20) ใช้สำหรับทั้ง Lv 1 และ Lv 2 -->
+    <div class="horizontal-answers" id="answer-grid-0-20" style="display: none;">
+        <!-- แถวบน: 0 - 10 -->
+        <div class="ans-row">
+            <button class="ans-btn" onclick="directAnswer('0', this)">0</button>
+            <button class="ans-btn" onclick="directAnswer('1', this)">1</button>
+            <button class="ans-btn" onclick="directAnswer('2', this)">2</button>
+            <button class="ans-btn" onclick="directAnswer('3', this)">3</button>
+            <button class="ans-btn" onclick="directAnswer('4', this)">4</button>
+            <button class="ans-btn" onclick="directAnswer('5', this)">5</button>
+            <button class="ans-btn" onclick="directAnswer('6', this)">6</button>
+            <button class="ans-btn" onclick="directAnswer('7', this)">7</button>
+            <button class="ans-btn" onclick="directAnswer('8', this)">8</button>
+            <button class="ans-btn" onclick="directAnswer('9', this)">9</button>
+            <button class="ans-btn" onclick="directAnswer('10', this)">10</button>
+        </div>
+        <!-- แถวล่าง: 11 - 20 -->
+        <div class="ans-row">
+            <button class="ans-btn" onclick="directAnswer('11', this)">11</button>
+            <button class="ans-btn" onclick="directAnswer('12', this)">12</button>
+            <button class="ans-btn" onclick="directAnswer('13', this)">13</button>
+            <button class="ans-btn" onclick="directAnswer('14', this)">14</button>
+            <button class="ans-btn" onclick="directAnswer('15', this)">15</button>
+            <button class="ans-btn" onclick="directAnswer('16', this)">16</button>
+            <button class="ans-btn" onclick="directAnswer('17', this)">17</button>
+            <button class="ans-btn" onclick="directAnswer('18', this)">18</button>
+            <button class="ans-btn" onclick="directAnswer('19', this)">19</button>
+            <button class="ans-btn" onclick="directAnswer('20', this)">20</button>
+        </div>
+    </div>
+
+    <!-- กรอบตัวเลขที่พิมพ์ตอบและ Numpad (มุมขวาล่าง) -->
+    <div class="input-wrapper" id="input-area" style="display: none;">
+        <div id="current-input"></div>
+        
+        <!-- Standard Numpad (แบบ Grid 3x4 สำหรับ Lv 3) -->
+        <div id="standard-numpad" class="numpad" style="display: none;">
+            <button class="numpad-btn" onclick="pressKey('1')">1</button>
+            <button class="numpad-btn" onclick="pressKey('2')">2</button>
+            <button class="numpad-btn" onclick="pressKey('3')">3</button>
+            <button class="numpad-btn" onclick="pressKey('4')">4</button>
+            <button class="numpad-btn" onclick="pressKey('5')">5</button>
+            <button class="numpad-btn" onclick="pressKey('6')">6</button>
+            <button class="numpad-btn" onclick="pressKey('7')">7</button>
+            <button class="numpad-btn" onclick="pressKey('8')">8</button>
+            <button class="numpad-btn" onclick="pressKey('9')">9</button>
+            <button class="numpad-btn del-btn" onclick="pressKey('Backspace')">DEL</button>
+            <button class="numpad-btn" onclick="pressKey('0')">0</button>
+            <button class="numpad-btn fire-btn" onclick="pressKey('Enter')">🚀</button>
+        </div>
+    </div>
+
+    <div id="wave-announcement">เริ่มภารกิจ!</div>
+
+    <!-- หน้าจอเมนูหลัก -->
+    <div id="main-menu" class="menu">
+        <h1>🚀 Math Defender</h1>
+        <div class="menu-subtitle">ภารกิจคณิตพิชิตอุกกาบาต</div>
+        
+        <div class="selection-group">
+            <label>1. เลือกโหมดปฏิบัติการ:</label>
+            <div class="btn-group">
+                <button class="mode-btn active" data-mode="add">บวก (+)</button>
+                <button class="mode-btn" data-mode="sub">ลบ (-)</button>
+                <button class="mode-btn" data-mode="mul">คูณ (×)</button>
+                <button class="mode-btn" data-mode="div">หาร (÷)</button>
+            </div>
+        </div>
+
+        <div class="selection-group">
+            <label>2. เลือกระดับความยาก (ด่านละ 20 ข้อ):</label>
+            <div class="btn-group">
+                <button class="lvl-btn active" data-lvl="1">
+                    Lv.1
+                    <span class="lvl-desc">ไม่เกิน 20 (15 วิ)</span>
+                </button>
+                <button class="lvl-btn" data-lvl="2">
+                    Lv.2
+                    <span class="lvl-desc">หลักสิบ ≤ 20 (20 วิ)</span>
+                </button>
+                <button class="lvl-btn" data-lvl="3">
+                    Lv.3
+                    <span class="lvl-desc">ไม่เกิน 90 (25 วิ)</span>
+                </button>
+            </div>
+        </div>
+
+        <button class="start-btn" onclick="startGame()">เริ่มภารกิจ! 🚀</button>
+    </div>
+
+    <!-- หน้าจอ Game Over -->
+    <div id="game-over" class="menu" style="display: none;">
+        <h1 style="color: #ff4757; text-shadow: 0 0 20px rgba(255,71,87,0.7);">💥 ฐานทัพถูกทำลาย!</h1>
+        <p style="font-size: 26px; margin: 20px 0;">คะแนนรวม: <span id="final-score" style="color: #45f3ff; font-weight: bold;">0</span></p>
+        <button class="start-btn" onclick="goHome()">กลับเมนูหลัก</button>
+    </div>
+
+    <!-- หน้าจอ Game Clear (ชนะด่าน) -->
+    <div id="game-clear-menu" class="menu" style="display: none;">
+        <h1 style="color: #00ff88; text-shadow: 0 0 20px rgba(0,255,136,0.7);">🌟 ภารกิจสำเร็จ!</h1>
+        <p style="font-size: 20px; color: #d0e8ff;">ยอดเยี่ยมมาก! คุณปกป้องโลกจากอุกกาบาตครบ 20 ลูกแล้ว</p>
+        <p style="font-size: 32px; font-weight: bold; margin: 15px 0;">คะแนนรวม: <span id="victory-score" style="color: #ffdd00;">0</span></p>
+        <button class="start-btn" style="background: linear-gradient(135deg, #00ff88 0%, #00b4d8 100%) !important; color: #03040c !important; box-shadow: 0 0 25px rgba(0, 255, 136, 0.6);" onclick="goHome()">กลับเมนูหลัก</button>
+    </div>
+</div>
+
+<script>
+    const wrapper = document.getElementById('game-wrapper');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    let stars = [];
+
+    // สร้างดวงดาวพื้นหลังอวกาศ
+    function initStars() {
+        stars = [];
+        const count = Math.floor((width * height) / 9000);
+        for (let i = 0; i < count; i++) {
+            stars.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                size: Math.random() * 2.2 + 0.5,
+                alpha: Math.random(),
+                twinkleSpeed: (Math.random() * 0.02 + 0.005) * (Math.random() < 0.5 ? 1 : -1),
+                color: Math.random() < 0.2 ? '#80f8ff' : (Math.random() < 0.2 ? '#ffd166' : '#ffffff')
+            });
+        }
+    }
+
+    // ปรับขนาด Canvas ให้เต็มจอ 100% เสมอ
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        initStars();
+    }
+    
+    window.addEventListener('resize', resize);
+    resize();
+
+    const uiInput = document.getElementById('current-input');
+    const inputArea = document.getElementById('input-area');
+    const waveAnnounce = document.getElementById('wave-announcement');
+    const mainMenu = document.getElementById('main-menu');
+    const gameOverMenu = document.getElementById('game-over');
+    const gameClearMenu = document.getElementById('game-clear-menu');
+
+    // ตัวแปรสถานะเกม
+    let gameState = 'menu'; 
+    let score = 0, lives = 3, meteorsSpawnedThisGame = 0;
+    let lastSpawnTime = 0, currentInput = "";
+    
+    let selectedMode = 'add';
+    let selectedLevel = 1;
+    let meteors = [], particles = [], lasers = [];
+    let freezeTimer = 0;
+    let turretAngle = 0; // มุมหันของป้อมปืนใหญ่
+    let turretRecoil = 0;
+
+    // --- ระบบเลือกโหมด & เลเวล ---
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            selectedMode = e.currentTarget.getAttribute('data-mode');
+        });
+    });
+    document.querySelectorAll('.lvl-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            selectedLevel = parseInt(e.currentTarget.getAttribute('data-lvl'));
+        });
+    });
+
+    // =========================================================================
+    // ระบบเสียง Web Audio API แท้ (แก้ปัญหาเสียงค้าง 100% ไม่ใช้ PolySynth ค้างโน้ต)
+    // =========================================================================
+    let audioCtx = null;
+    let isMuted = false;
+    let bgmInterval = null;
+    let bgmStep = 0;
+
+    function initAudio() {
+        if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContextClass();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        document.getElementById('muteBtn').innerText = isMuted ? '🔇' : '🔊';
+        if (isMuted) {
+            stopBGM();
+        } else if (gameState === 'playing') {
+            startBGM();
+        }
+    }
+
+    // ฟังก์ชันสร้างเสียงโน้ตที่ตัดจบอัตโนมัติ (ไม่มีทางค้าง)
+    function playTone(freq, type, duration, vol = 0.12, delay = 0, slideToFreq = null) {
+        if (isMuted || !audioCtx) return;
+        try {
+            const now = audioCtx.currentTime + delay;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            if (slideToFreq) {
+                osc.frequency.exponentialRampToValueAtTime(slideToFreq, now + duration);
+            }
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(vol, now + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + duration + 0.02);
+        } catch (err) {
+            // ป้องกันกรณีเบราว์เซอร์บล็อกเสียง
+        }
+    }
+
+    function startBGM() {
+        stopBGM();
+        if (isMuted || !audioCtx) return;
+        const notes = [130.81, 164.81, 196.00, 246.94, 261.63, 196.00, 164.81, 130.81]; // C3 E3 G3 B3 C4
+        bgmStep = 0;
+        bgmInterval = setInterval(() => {
+            if (gameState !== 'playing' || isMuted) return;
+            playTone(notes[bgmStep % notes.length], 'triangle', 0.22, 0.04);
+            bgmStep++;
+        }, 260);
+    }
+
+    function stopBGM() {
+        if (bgmInterval) {
+            clearInterval(bgmInterval);
+            bgmInterval = null;
+        }
+    }
+
+    let lastBoomTime = 0;
+    function playSFX(type) {
+        if (isMuted || !audioCtx) return;
+        const nowMs = Date.now();
+
+        if (type === 'laser') {
+            // เสียงยิงเลเซอร์ไซไฟ
+            playTone(750, 'sawtooth', 0.14, 0.12, 0, 180);
+        } 
+        else if (type === 'boom') {
+            if (nowMs - lastBoomTime > 60) {
+                playTone(140, 'sine', 0.35, 0.25, 0, 28);
+                playTone(90, 'triangle', 0.28, 0.18, 0.02, 20);
+                lastBoomTime = nowMs;
+            }
+        } 
+        else if (type === 'wrong') {
+            playTone(160, 'square', 0.18, 0.12, 0, 110);
+        } 
+        else if (type === 'powerup') {
+            // ไล่โน้ต Arpeggio ทีละตัวพร้อมตัดจบอัตโนมัติ ไม่เกิดอาการเสียงค้างแน่นอน
+            const chord = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            chord.forEach((freq, idx) => {
+                playTone(freq, 'sine', 0.28, 0.14, idx * 0.065);
+            });
+        } 
+        else if (type === 'victory') {
+            const fanfare = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+            fanfare.forEach((freq, idx) => {
+                playTone(freq, 'triangle', 0.4, 0.16, idx * 0.09);
+            });
+        }
+    }
+
+    function getOpSign(mode) {
+        if(mode==='add') return '+';
+        if(mode==='sub') return '-';
+        if(mode==='mul') return '×';
+        if(mode==='div') return '÷';
+    }
+
+    // =========================================================================
+    // ระบบสุ่มโจทย์ (ปรับปรุง Lv.1 ให้ครอบคลุมถึง 20 ตามที่ต้องการ)
+    // =========================================================================
+    function generateProblem(mode, level) {
+        let num1, num2, ans;
+        
+        if (level === 1) {
+            // Level 1: ตัวเลขและคำตอบไม่เกิน 20
+            if (mode === 'add') {
+                // สุ่มคำตอบตั้งแต่ 0 ถึง 20 เพื่อให้มีโจทย์ที่ได้ผลลัพธ์ถึง 19 และ 20 ด้วย
+                ans = Math.floor(Math.random() * 21); // 0 - 20
+                num1 = Math.floor(Math.random() * (ans + 1)); // 0 - ans
+                num2 = ans - num1;
+            } else if (mode === 'sub') {
+                // ตัวตั้งไม่เกิน 20 ผลลัพธ์ไม่ติดลบ (0 - 20)
+                num1 = Math.floor(Math.random() * 21); // 0 - 20
+                num2 = Math.floor(Math.random() * (num1 + 1)); // 0 - num1
+                ans = num1 - num2;
+            } else if (mode === 'mul') {
+                // คูณเลขพื้นฐานที่ผลลัพธ์ไม่เกิน 20
+                do {
+                    num1 = Math.floor(Math.random() * 11); // 0 - 10
+                    num2 = Math.floor(Math.random() * 6);  // 0 - 5
+                    ans = num1 * num2;
+                } while (ans > 20);
+            } else if (mode === 'div') {
+                // หารลงตัวที่ตัวตั้งและคำตอบไม่เกิน 20
+                do {
+                    num2 = Math.floor(Math.random() * 5) + 1; // 1 - 5
+                    ans = Math.floor(Math.random() * 11);     // 0 - 10
+                    num1 = ans * num2;
+                } while (num1 > 20 || ans > 20);
+            }
+        } else if (level === 2) {
+            // Level 2: หลักสิบคำนวณกับหลักหน่วย คำตอบไม่เกิน 20
+            if (mode === 'add') {
+                num1 = Math.floor(Math.random() * 10) + 10; // 10 - 19
+                let maxNum2 = 20 - num1; // ให้บวกกันแล้วสูงสุดได้ 20 พอดี
+                num2 = Math.floor(Math.random() * maxNum2) + 1; 
+                ans = num1 + num2;
+            } else if (mode === 'sub') {
+                num1 = Math.floor(Math.random() * 11) + 10; // 10 - 20
+                num2 = Math.floor(Math.random() * 9) + 1;   // 1 - 9
+                ans = num1 - num2;
+            } else if (mode === 'mul') {
+                num1 = 10;
+                num2 = Math.floor(Math.random() * 2) + 1; // 1 - 2 (10x1=10, 10x2=20)
+                ans = num1 * num2;
+            } else if (mode === 'div') {
+                do {
+                    ans = Math.floor(Math.random() * 20) + 1; // 1 - 20
+                    num2 = Math.floor(Math.random() * 9) + 1; // 1 - 9
+                    num1 = ans * num2;
+                } while (num1 < 10 || num1 > 99 || ans > 20); 
+            }
+        } else {
+            // Level 3: ตัวเลขและคำตอบไม่เกิน 90
+            if (mode === 'add') {
+                ans = Math.floor(Math.random() * 71) + 20; // 20 - 90
+                num1 = Math.floor(Math.random() * (ans - 19)) + 10; 
+                num2 = ans - num1;
+            } else if (mode === 'sub') {
+                num1 = Math.floor(Math.random() * 71) + 20; // 20 - 90
+                num2 = Math.floor(Math.random() * (num1 - 10)) + 10; 
+                ans = num1 - num2;
+            } else if (mode === 'mul') {
+                do {
+                    num1 = Math.floor(Math.random() * 12) + 2;
+                    num2 = Math.floor(Math.random() * 12) + 2;
+                    ans = num1 * num2;
+                } while (ans > 90);
+            } else if (mode === 'div') {
+                do {
+                    num2 = Math.floor(Math.random() * 9) + 2; 
+                    ans = Math.floor(Math.random() * 30) + 2;
+                    num1 = num2 * ans;
+                } while (num1 > 90);
+            }
+        }
+        return { text: `${num1} ${getOpSign(mode)} ${num2}`, ans: ans.toString() };
+    }
+
+    function spawnMeteorCheck() {
+        if (gameState !== 'playing') return;
+        
+        const totalQuestions = 20;
+        
+        // เช็คชนะด่านเมื่อครบ 20 ข้อและไม่มีอุกกาบาตเหลือบนจอ
+        if (meteorsSpawnedThisGame >= totalQuestions) {
+            if (meteors.length === 0 && lasers.length === 0) {
+                gameClear();
+            }
+            return; 
+        }
+
+        const now = Date.now();
+        let maxOnScreen = selectedLevel === 1 ? 2 : 3; 
+        let cooldown = selectedLevel === 1 ? 3800 : 4200; 
+
+        if (meteors.length < maxOnScreen && (now - lastSpawnTime > cooldown || meteors.length === 0)) {
+            let radius = Math.min(width, height) * 0.065 + Math.random() * 12;
+            radius = Math.max(42, Math.min(radius, 64));
+            
+            // สุ่มตำแหน่งแนวนอนไม่ให้ทับกรอบคำตอบขวาล่าง
+            let minX = radius + 40;
+            let maxX = width - Math.max(240, width * 0.22);
+            if (maxX <= minX) maxX = width - radius - 20;
+            let lx = minX + Math.random() * (maxX - minX);
+
+            let y = -radius - 20;
+            let prob = generateProblem(selectedMode, selectedLevel);
+            
+            // เวลาในการตก (Lv.1 = 15 วิ, Lv.2 = 20 วิ, Lv.3 = 25 วิ)
+            let fallTimeSec = selectedLevel === 1 ? 15 : (selectedLevel === 2 ? 20 : 25);
+            let targetBottomY = height - 140;
+            let speed = (targetBottomY + radius) / (fallTimeSec * 60);
+
+            // ระบบไอเทมพิเศษ
+            let isPowerUp = false;
+            let powerType = null;
+            let powerLabel = "";
+            let hue = Math.floor(Math.random() * 360);
+            let color = `hsl(${hue}, 65%, 45%)`;
+            
+            if (meteorsSpawnedThisGame >= 2 && Math.random() < 0.18) {
+                isPowerUp = true;
+                let types = ['freeze', 'bomb', 'heal'];
+                powerType = types[Math.floor(Math.random() * types.length)];
+                if (powerType === 'heal' && lives >= 3) powerType = 'bomb'; 
+                
+                if (powerType === 'freeze') { color = "#00f5ff"; powerLabel = "❄️ แช่แข็ง"; }
+                if (powerType === 'bomb')   { color = "#ff5400"; powerLabel = "💣 ระเบิด"; }
+                if (powerType === 'heal')   { color = "#00ff88"; powerLabel = "💚 เพิ่มพลัง"; }
+            }
+
+            // สร้างจุดขรุขระของอุกกาบาตไว้ล่วงหน้าเพื่อไม่ให้กระพริบเวลาวาด
+            let vertices = [];
+            const numVerts = 8;
+            for (let j = 0; j < numVerts; j++) {
+                let angle = (j / numVerts) * Math.PI * 2;
+                let r = radius * (0.84 + Math.random() * 0.22);
+                vertices.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+            }
+
+            meteors.push({
+                x: lx, y: y, radius: radius, speed: speed,
+                text: prob.text, ans: prob.ans, color: color,
+                isPowerUp: isPowerUp, powerType: powerType, powerLabel: powerLabel,
+                rotation: 0, rotSpeed: (Math.random() - 0.5) * 0.025,
+                vertices: vertices
+            });
+
+            meteorsSpawnedThisGame++;
+            lastSpawnTime = now;
+            
+            document.getElementById('wave-display').innerText = `${meteorsSpawnedThisGame}/${totalQuestions}`;
+        }
+    }
+
+    function pressKey(key) {
+        if (gameState !== 'playing') return;
+        initAudio();
+        if (key >= '0' && key <= '9') {
+            if (currentInput.length < 4) {
+                currentInput += key;
+                uiInput.innerText = currentInput;
+                uiInput.style.transform = "scale(1.08)";
+                setTimeout(() => uiInput.style.transform = "scale(1)", 90);
+            }
+        } 
+        else if (key === 'Backspace' || key === 'Del') {
+            currentInput = currentInput.slice(0, -1);
+            uiInput.innerText = currentInput;
+        }
+        else if (key === 'Enter') {
+            shootLaser(currentInput);
+        }
+    }
+
+    // ฟังก์ชันเมื่อกดปุ่มคำตอบ 0-20 โดยตรง
+    function directAnswer(val, btnElement) {
+        if (gameState !== 'playing') return;
+        initAudio();
+        uiInput.innerText = val;
+        let hit = shootLaser(val);
+        
+        btnElement.style.background = hit ? "#00ff88" : "#ff4757";
+        btnElement.style.color = hit ? "#000" : "#fff";
+        setTimeout(() => {
+            btnElement.style.background = "";
+            btnElement.style.color = "";
+        }, 220);
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (gameState !== 'playing') return;
+        if (e.key >= '0' && e.key <= '9') pressKey(e.key);
+        else if (e.key === 'Backspace') { pressKey('Backspace'); e.preventDefault(); }
+        else if (e.key === 'Enter') { pressKey('Enter'); e.preventDefault(); }
+    });
+
+    function getTurretPosition() {
+        // วางป้อมปืนใหญ่ไว้เหนือแผงปุ่ม 0-20 ใน Lv.1-2 หรือชิดขอบล่างใน Lv.3
+        const bottomOffset = (selectedLevel === 1 || selectedLevel === 2) ? 155 : 45;
+        return { x: width / 2, y: height - bottomOffset };
+    }
+
+    function shootLaser(targetAns) {
+        if (targetAns === "") return false;
+        
+        let targetIndex = -1;
+        let maxY = -9999;
+        
+        // เลือกยิงอุกกาบาตลูกที่คำตอบตรงกันและอยู่ต่ำที่สุดก่อน
+        for (let i = 0; i < meteors.length; i++) {
+            if (meteors[i].ans === targetAns) {
+                if (meteors[i].y > maxY) {
+                    maxY = meteors[i].y;
+                    targetIndex = i;
+                }
+            }
+        }
+
+        if (targetIndex !== -1) {
+            let target = meteors[targetIndex];
+            let turretPos = getTurretPosition();
+            
+            // หันป้อมปืนไปหาเป้าหมายทันที
+            turretAngle = Math.atan2(target.x - turretPos.x, -(target.y - turretPos.y));
+            turretRecoil = 12;
+
+            lasers.push({
+                x: turretPos.x + Math.sin(turretAngle) * 55,
+                y: turretPos.y - Math.cos(turretAngle) * 55,
+                tx: target.x,
+                ty: target.y,
+                targetIndex: targetIndex,
+                speed: 38
+            });
+            
+            playSFX('laser');
+            currentInput = "";
+            setTimeout(() => { uiInput.innerText = ""; }, 150);
+            uiInput.style.borderColor = "#00ff88";
+            setTimeout(() => uiInput.style.borderColor = "#45f3ff", 220);
+            return true;
+        } else {
+            playSFX('wrong');
+            currentInput = "";
+            uiInput.innerText = "";
+            uiInput.style.borderColor = "#ff4757";
+            uiInput.style.animation = "shake 0.3s";
+            setTimeout(() => {
+                uiInput.style.borderColor = "#45f3ff";
+                uiInput.style.animation = "none";
+            }, 300);
+            return false;
+        }
+    }
+
+    function activatePowerUp(type) {
+        playSFX('powerup');
+        if (type === 'freeze') {
+            freezeTimer = 300; // แช่แข็ง 5 วินาที
+            wrapper.style.boxShadow = "inset 0 0 90px rgba(0, 245, 255, 0.75)";
+            setTimeout(() => wrapper.style.boxShadow = "none", 5000);
+        } 
+        else if (type === 'bomb') {
+            for (let i = meteors.length - 1; i >= 0; i--) {
+                createExplosion(meteors[i].x, meteors[i].y, meteors[i].color, meteors[i].ans);
+                score += 10 * selectedLevel;
+            }
+            meteors = [];
+            document.getElementById('score').innerText = score;
+            wrapper.style.boxShadow = "inset 0 0 120px rgba(255, 165, 0, 0.9)";
+            setTimeout(() => wrapper.style.boxShadow = "none", 300);
+        }
+        else if (type === 'heal') {
+            if (lives < 3) lives++;
+            updateLivesDisplay();
+            wrapper.style.boxShadow = "inset 0 0 90px rgba(0, 255, 136, 0.75)";
+            setTimeout(() => wrapper.style.boxShadow = "none", 500);
+        }
+    }
+
+    function createExplosion(x, y, color, ansText) {
+        playSFX('boom');
+        for (let i = 0; i < 32; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let spd = Math.random() * 9 + 2;
+            particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd,
+                size: Math.random() * 5 + 3,
+                life: 1.0,
+                color: Math.random() < 0.3 ? "#ffdd00" : color
+            });
+        }
+        particles.push({
+            x: x, y: y, vx: 0, vy: -2.5,
+            life: 1.3, text: `✓ ${ansText}`, color: "#00ff88"
+        });
+    }
+
+    // วาดพื้นหลังอวกาศ โลก และเกราะป้องกัน
+    function drawBackground() {
+        // ดวงดาวระยิบระยับ
+        for (let s of stars) {
+            s.alpha += s.twinkleSpeed;
+            if (s.alpha > 1 || s.alpha < 0.2) s.twinkleSpeed *= -1;
+            ctx.fillStyle = s.color;
+            ctx.globalAlpha = Math.max(0.1, Math.min(1, s.alpha));
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+
+        // เส้นโค้งชั้นบรรยากาศโลกด้านล่าง
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(width / 2, height + width * 1.35, width * 1.45, Math.PI * 1.15, Math.PI * 1.85);
+        let planetGrad = ctx.createRadialGradient(
+            width / 2, height + width * 1.35, width * 1.38,
+            width / 2, height + width * 1.35, width * 1.46
+        );
+        planetGrad.addColorStop(0, '#071a3e');
+        planetGrad.addColorStop(0.7, '#0077b6');
+        planetGrad.addColorStop(1, 'rgba(69, 243, 255, 0)');
+        ctx.fillStyle = planetGrad;
+        ctx.fill();
+
+        // เส้นเกราะพลังงานสีฟ้า
+        ctx.strokeStyle = freezeTimer > 0 ? "rgba(0, 245, 255, 0.8)" : "rgba(69, 243, 255, 0.45)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // วาดป้อมปืนใหญ่อวกาศ
+    function drawTurret() {
+        const pos = getTurretPosition();
+        if (turretRecoil > 0) turretRecoil *= 0.8;
+
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+
+        // เงาเรืองแสงใต้ฐาน
+        ctx.shadowColor = "#45f3ff";
+        ctx.shadowBlur = 20;
+
+        // ส่วนกระบอกปืนที่หมุนเล็งตามเป้าหมายได้
+        ctx.save();
+        ctx.rotate(turretAngle);
+        ctx.translate(0, turretRecoil);
+
+        // ท่อพลังงานคู่
+        ctx.fillStyle = "#1b2a47";
+        ctx.strokeStyle = "#45f3ff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-16, -68, 32, 52, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        // แกนแสงเลเซอร์ตรงกลางกระบอกปืน
+        ctx.fillStyle = freezeTimer > 0 ? "#00f5ff" : "#ffdd00";
+        ctx.fillRect(-5, -66, 10, 42);
+
+        // ปลายกระบอกปืน
+        ctx.fillStyle = "#45f3ff";
+        ctx.fillRect(-20, -60, 40, 6);
+        ctx.restore();
+
+        // ฐานโดมป้อมปืน
+        let baseGrad = ctx.createLinearGradient(0, -30, 0, 30);
+        baseGrad.addColorStop(0, "#2b3e63");
+        baseGrad.addColorStop(1, "#0b132b");
+        ctx.fillStyle = baseGrad;
+        ctx.beginPath();
+        ctx.arc(0, 5, 42, Math.PI, 0);
+        ctx.lineTo(56, 28);
+        ctx.lineTo(-56, 28);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = "#45f3ff";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // แกนพลังงานหลักตรงกลางป้อม
+        ctx.fillStyle = freezeTimer > 0 ? "#00f5ff" : "#ff4757";
+        ctx.beginPath();
+        ctx.arc(0, 6, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    function update() {
+        if (gameState !== 'playing') return;
+        ctx.clearRect(0, 0, width, height);
+
+        drawBackground();
+
+        if (freezeTimer > 0) freezeTimer--;
+
+        spawnMeteorCheck(); 
+        drawTurret();
+
+        // อัปเดตและวาดเลเซอร์
+        for (let i = lasers.length - 1; i >= 0; i--) {
+            let l = lasers[i];
+            if (meteors[l.targetIndex]) {
+                l.tx = meteors[l.targetIndex].x;
+                l.ty = meteors[l.targetIndex].y;
+            }
+            let dx = l.tx - l.x;
+            let dy = l.ty - l.y;
+            let dist = Math.hypot(dx, dy);
+
+            if (dist < l.speed) {
+                if (meteors[l.targetIndex]) {
+                    let m = meteors[l.targetIndex];
+                    createExplosion(m.x, m.y, m.color, m.ans);
+                    
+                    if (m.isPowerUp) activatePowerUp(m.powerType);
+                    
+                    meteors.splice(l.targetIndex, 1); 
+                    score += 10 * selectedLevel; 
+                    document.getElementById('score').innerText = score;
+                    
+                    for (let j = 0; j < lasers.length; j++) {
+                        if (lasers[j].targetIndex > l.targetIndex) lasers[j].targetIndex--;
+                        else if (lasers[j].targetIndex === l.targetIndex && j !== i) lasers[j].targetIndex = -1;
+                    }
+                }
+                lasers.splice(i, 1);
+            } else {
+                l.x += (dx / dist) * l.speed;
+                l.y += (dy / dist) * l.speed;
+                ctx.save();
+                ctx.strokeStyle = "#00ff88";
+                ctx.shadowColor = "#00ff88";
+                ctx.shadowBlur = 18;
+                ctx.lineWidth = 6;
+                ctx.lineCap = "round";
+                ctx.beginPath();
+                ctx.moveTo(l.x, l.y);
+                ctx.lineTo(l.x - (dx / dist) * 42, l.y - (dy / dist) * 42);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // อัปเดตและวาดอุกกาบาต
+        const hitLineY = (selectedLevel === 1 || selectedLevel === 2) ? height - 130 : height - 30;
+        for (let i = meteors.length - 1; i >= 0; i--) {
+            let m = meteors[i];
+            
+            if (freezeTimer <= 0) {
+                m.y += m.speed;
+                m.rotation += m.rotSpeed;
+            } else if ( m.y < 55 ) {
+                // ถ้าน้ำแข็งทำงานตอนเพิ่งเกิด ให้เลื่อนลงมาให้พ้นขอบบนเพื่อให้เห็นโจทย์ชัดเจน
+                m.y += m.speed;
+            }
+
+            // วาดหางไฟอุกกาบาต
+            ctx.save();
+            let tailGrad = ctx.createLinearGradient(m.x, m.y, m.x, m.y - m.radius * 2.2);
+            tailGrad.addColorStop(0, m.isPowerUp ? m.color : "rgba(255, 100, 30, 0.55)");
+            tailGrad.addColorStop(1, "rgba(255, 100, 30, 0)");
+            ctx.fillStyle = tailGrad;
+            ctx.beginPath();
+            ctx.moveTo(m.x - m.radius * 0.7, m.y);
+            ctx.lineTo(m.x + m.radius * 0.7, m.y);
+            ctx.lineTo(m.x, m.y - m.radius * 2.3);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // วาดก้อนหินอุกกาบาต
+            ctx.save();
+            ctx.translate(m.x, m.y);
+            ctx.rotate(m.rotation);
+            
+            ctx.shadowColor = m.isPowerUp ? m.color : "#ff5400";
+            ctx.shadowBlur = m.isPowerUp ? 28 : 14;
+            
+            ctx.fillStyle = m.color;
+            ctx.beginPath();
+            for (let j = 0; j < m.vertices.length; j++) {
+                let v = m.vertices[j];
+                if (j === 0) ctx.moveTo(v.x, v.y);
+                else ctx.lineTo(v.x, v.y);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = m.isPowerUp ? "#ffffff" : "rgba(255,200,150,0.5)";
+            ctx.stroke();
+            
+            // หลุมอุกกาบาตด้านใน
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "rgba(0,0,0,0.28)";
+            ctx.beginPath();
+            ctx.arc(-m.radius * 0.25, -m.radius * 0.2, m.radius * 0.25, 0, Math.PI * 2);
+            ctx.arc(m.radius * 0.28, m.radius * 0.22, m.radius * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // ป้ายบอกประเภทไอเทมพิเศษ
+            if (m.isPowerUp && m.powerLabel) {
+                ctx.save();
+                ctx.font = 'bold 15px "Chakra Petch"';
+                ctx.fillStyle = m.color;
+                ctx.textAlign = "center";
+                ctx.shadowColor = "#000";
+                ctx.shadowBlur = 6;
+                ctx.fillText(m.powerLabel, m.x, m.y - m.radius - 10);
+                ctx.restore();
+            }
+
+            // ป้ายโจทย์คณิตศาสตร์บนอุกกาบาต
+            ctx.save();
+            ctx.font = `bold ${Math.round(m.radius * 0.56)}px "Chakra Petch"`;
+            let textWidth = ctx.measureText(m.text).width;
+            ctx.fillStyle = "rgba(6, 10, 24, 0.82)";
+            ctx.strokeStyle = m.isPowerUp ? m.color : "#45f3ff";
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.roundRect(m.x - textWidth / 2 - 14, m.y - 20, textWidth + 28, 40, 10);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = m.isPowerUp ? "#ffdd00" : "#ffffff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(m.text, m.x, m.y + 1);
+            ctx.restore();
+
+            // เมื่ออุกกาบาตตกถึงฐานทัพ
+            if (m.y + m.radius * 0.5 > hitLineY) {
+                meteors.splice(i, 1);
+                lives--;
+                updateLivesDisplay();
+                playSFX('boom');
+                
+                wrapper.style.boxShadow = "inset 0 0 100px rgba(255, 0, 50, 0.85)";
+                setTimeout(() => wrapper.style.boxShadow = "none", 250);
+                
+                if (lives <= 0) gameOver();
+            }
+        }
+
+        // อัปเดตพาร์ติเคิลระเบิดและตัวเลขลอย
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.024;
+
+            if (p.text) {
+                ctx.save();
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.font = "bold 40px 'Chakra Petch'";
+                ctx.textAlign = "center";
+                ctx.shadowColor = "#000";
+                ctx.shadowBlur = 8;
+                ctx.fillText(p.text, p.x, p.y);
+                ctx.restore();
+            } else {
+                ctx.save();
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size || 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            if (p.life <= 0) particles.splice(i, 1);
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    function updateLivesDisplay() {
+        let text = "";
+        for (let i = 0; i < lives; i++) text += "❤️";
+        for (let i = lives; i < 3; i++) text += "🖤";
+        document.getElementById('lives').innerText = text;
+    }
+
+    function gameClear() {
+        if (gameState !== 'playing') return;
+        gameState = 'gameclear';
+        stopBGM();
+        playSFX('victory');
+
+        inputArea.style.display = 'none';
+        document.getElementById('answer-grid-0-20').style.display = 'none';
+        
+        gameClearMenu.style.display = 'block';
+        document.getElementById('victory-score').innerText = score;
+    }
+
+    function startGame() {
+        initAudio();
+        startBGM();
+
+        mainMenu.style.display = 'none';
+        gameOverMenu.style.display = 'none';
+        gameClearMenu.style.display = 'none';
+        document.getElementById('homeBtn').style.display = 'flex';
+        inputArea.style.display = 'flex';
+        
+        // ทั้ง Lv.1 และ Lv.2 ใช้แผงปุ่มคำตอบ 0-20 เหมือนกัน ส่วน Lv.3 ใช้แป้น Numpad
+        const showGrid0to20 = (selectedLevel === 1 || selectedLevel === 2);
+        document.getElementById('answer-grid-0-20').style.display = showGrid0to20 ? 'flex' : 'none';
+        document.getElementById('standard-numpad').style.display = (selectedLevel === 3) ? 'grid' : 'none';
+        
+        uiInput.style.display = 'flex';
+        
+        // ขยับกล่อง input มุมขวาล่างไม่ให้ทับปุ่มหรือเครดิต
+        if (showGrid0to20) {
+            inputArea.style.bottom = "145px";
+        } else {
+            inputArea.style.bottom = "38px"; 
+        }
+
+        gameState = 'playing';
+        score = 0;
+        lives = 3;
+        meteorsSpawnedThisGame = 0;
+        freezeTimer = 0;
+        turretAngle = 0;
+        
+        document.getElementById('score').innerText = score;
+        document.getElementById('wave-display').innerText = "1/20";
+        updateLivesDisplay();
+        
+        meteors = []; particles = []; lasers = [];
+        currentInput = ""; uiInput.innerText = "";
+        
+        lastSpawnTime = Date.now() - 2000; 
+        waveAnnounce.innerText = `ภารกิจ Lv.${selectedLevel} เริ่ม!`;
+        waveAnnounce.style.opacity = 1;
+        setTimeout(() => waveAnnounce.style.opacity = 0, 1800);
+
+        requestAnimationFrame(update);
+    }
+
+    function gameOver() {
+        gameState = 'gameover';
+        stopBGM();
+        inputArea.style.display = 'none';
+        document.getElementById('answer-grid-0-20').style.display = 'none';
+        gameOverMenu.style.display = 'block';
+        document.getElementById('final-score').innerText = score;
+    }
+
+    function goHome() {
+        gameState = 'menu';
+        stopBGM();
+        mainMenu.style.display = 'block';
+        gameOverMenu.style.display = 'none';
+        gameClearMenu.style.display = 'none';
+        document.getElementById('homeBtn').style.display = 'none';
+        inputArea.style.display = 'none';
+        document.getElementById('answer-grid-0-20').style.display = 'none';
+        ctx.clearRect(0, 0, width, height);
+        drawBackground();
+    }
+
+    // วาดพื้นหลังรอในหน้าเมนูตอนเริ่มโหลด
+    drawBackground();
+</script>
+</body>
+</html>
